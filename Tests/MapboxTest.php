@@ -88,6 +88,7 @@ class MapboxTest extends BaseTestCase
         $this->assertEquals(94103, $result->getPostalCode());
         $this->assertEquals('San Francisco', $result->getLocality());
         $this->assertEquals('California', $result->getAdminLevels()->get(2)->getName());
+        $this->assertEquals('CA', $result->getAdminLevels()->get(2)->getCode());
         $this->assertEquals('San Francisco', $result->getAdminLevels()->get(1)->getName());
         $this->assertEquals('United States', $result->getCountry()->getName());
         $this->assertEquals('US', $result->getCountry()->getCode());
@@ -157,10 +158,19 @@ class MapboxTest extends BaseTestCase
         /** @var Location $result */
         $result = $results->first();
         $this->assertInstanceOf(Address::class, $result);
+        $this->assertEquals('116th Street', $result->getStreetName());
+        $this->assertEquals(11356, $result->getPostalCode());
+        $this->assertCount(2, $result->getAdminLevels());
+        $this->assertEquals('United States', $result->getCountry()->getName());
+        $this->assertEquals('US', $result->getCountry()->getCode());
+        $this->assertEquals('address.2431617896783536', $result->getId());
         $this->assertNotNull($result->getCoordinates()->getLatitude());
         $this->assertNotNull($result->getCoordinates()->getLongitude());
+        $this->assertEquals(40.786596, $result->getCoordinates()->getLatitude(), '', 0.001);
+        $this->assertEquals(-73.851157, $result->getCoordinates()->getLongitude(), '', 0.001);
         $this->assertEquals('New York', $result->getLocality());
         $this->assertCount(2, $result->getAdminLevels());
         $this->assertEquals('New York', $result->getAdminLevels()->get(1)->getName());
+        $this->assertEquals('NY', $result->getAdminLevels()->get(2)->getCode());
     }
 }

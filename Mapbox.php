@@ -352,7 +352,11 @@ final class Mapbox extends AbstractHttpProvider implements Provider
                 break;
 
             case 'region':
-                $builder->addAdminLevel(2, $value['text']);
+                $code = null;
+                if (!empty($value['short_code']) && preg_match('/[A-z]{2}-/', $value['short_code'])) {
+                    $code = preg_replace('/[A-z]{2}-/', '', $value['short_code']);
+                }
+                $builder->addAdminLevel(2, $value['text'], $code);
 
                 break;
 
