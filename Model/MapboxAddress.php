@@ -1,22 +1,9 @@
-<?php
-
-declare(strict_types=1);
-
-/*
- * This file is part of the Geocoder package.
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- *
- * @license    MIT License
- */
+<?php declare(strict_types=1);
 
 namespace Geocoder\Provider\Mapbox\Model;
 
 use Geocoder\Model\Address;
 
-/**
- * @author Fede Isas <federicoisas@gmail.com>
- */
 final class MapboxAddress extends Address
 {
     /**

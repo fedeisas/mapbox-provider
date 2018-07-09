@@ -1,14 +1,4 @@
-<?php
-
-declare(strict_types=1);
-
-/*
- * This file is part of the Geocoder package.
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- *
- * @license    MIT License
- */
+<?php declare(strict_types=1);
 
 namespace Geocoder\Provider\Mapbox;
 
@@ -25,9 +15,6 @@ use Geocoder\Provider\Mapbox\Model\MapboxAddress;
 use Geocoder\Provider\Provider;
 use Http\Client\HttpClient;
 
-/**
- * @author Fede Isas <federicoisas@gmail.com>
- */
 final class Mapbox extends AbstractHttpProvider implements Provider
 {
     /**
@@ -152,8 +139,12 @@ final class Mapbox extends AbstractHttpProvider implements Provider
      * @param string|null $country
      * @param string $geocodingMode
      */
-    public function __construct(HttpClient $client, string $accessToken, string $country = null, string $geocodingMode = self::GEOCODING_MODE_PLACES)
-    {
+    public function __construct(
+        HttpClient $client,
+        string $accessToken,
+        string $country = null,
+        string $geocodingMode = self::GEOCODING_MODE_PLACES
+    ) {
         parent::__construct($client);
 
         if (!in_array($geocodingMode, self::GEOCODING_MODES)) {
@@ -177,8 +168,14 @@ final class Mapbox extends AbstractHttpProvider implements Provider
         $url = sprintf(self::GEOCODE_ENDPOINT_URL_SSL, $this->geocodingMode, rawurlencode($query->getText()));
 
         $urlParameters = [];
-        if (null !== $bounds = $query->getBounds()) {
-            $urlParameters['bbox'] = sprintf('%s,%s|%s,%s', $bounds->getWest(), $bounds->getSouth(), $bounds->getEast(), $bounds->getNorth());
+        if ($query->getBounds()) {
+            $urlParameters['bbox'] = sprintf(
+                '%s,%s|%s,%s',
+                $query->getBounds()->getWest(),
+                $query->getBounds()->getSouth(),
+                $query->getBounds()->getEast(),
+                $query->getBounds()->getNorth()
+            );
         }
 
         if (null !== $locationType = $query->getData('location_type')) {
@@ -197,7 +194,12 @@ final class Mapbox extends AbstractHttpProvider implements Provider
     public function reverseQuery(ReverseQuery $query): Collection
     {
         $coordinate = $query->getCoordinates();
-        $url = sprintf(self::REVERSE_ENDPOINT_URL_SSL, $this->geocodingMode, $coordinate->getLongitude(), $coordinate->getLatitude());
+        $url = sprintf(
+            self::REVERSE_ENDPOINT_URL_SSL,
+            $this->geocodingMode,
+            $coordinate->getLongitude(),
+            $coordinate->getLatitude()
+        );
 
         if (null !== $locationType = $query->getData('location_type')) {
             $urlParameters['types'] = is_array($locationType) ? join(',', $locationType) : $locationType;
@@ -257,13 +259,13 @@ final class Mapbox extends AbstractHttpProvider implements Provider
         $json = $this->validateResponse($url, $content);
 
         // no result
-        if (!isset($json->features) || !count($json->features)) {
+        if (!isset($json['features']) || !count($json['features'])) {
             return new AddressCollection([]);
         }
 
         $results = [];
-        foreach ($json->features as $result) {
-            if (!property_exists($result, 'context')) {
+        foreach ($json['features'] as $result) {
+            if (!array_key_exists('context', $result)) {
                 break;
             }
 
@@ -271,31 +273,31 @@ final class Mapbox extends AbstractHttpProvider implements Provider
             $this->parseCoordinates($builder, $result);
 
             // set official Mapbox place id
-            if (isset($result->id)) {
-                $builder->setValue('id', $result->id);
+            if (isset($result['id'])) {
+                $builder->setValue('id', $result['id']);
             }
 
             // set official Mapbox place id
-            if (isset($result->text)) {
-                $builder->setValue('street_name', $result->text);
+            if (isset($result['text'])) {
+                $builder->setValue('street_name', $result['text']);
             }
 
             // update address components
-            foreach ($result->context as $component) {
-                $this->updateAddressComponent($builder, $component->id, $component);
+            foreach ($result['context'] as $component) {
+                $this->updateAddressComponent($builder, $component['id'], $component);
             }
 
             /** @var MapboxAddress $address */
             $address = $builder->build(MapboxAddress::class);
             $address = $address->withId($builder->getValue('id'));
-            if (isset($result->address)) {
-                $address = $address->withStreetNumber($result->address);
+            if (isset($result['address'])) {
+                $address = $address->withStreetNumber($result['address']);
             }
-            if (isset($result->place_type)) {
-                $address = $address->withResultType($result->place_type);
+            if (isset($result['place_type'])) {
+                $address = $address->withResultType($result['place_type']);
             }
-            if (isset($result->place_name)) {
-                $address = $address->withFormattedAddress($result->place_name);
+            if (isset($result['place_name'])) {
+                $address = $address->withFormattedAddress($result['place_name']);
             }
             $address = $address->withStreetName($builder->getValue('street_name'));
             $address = $address->withNeighborhood($builder->getValue('neighborhood'));
@@ -314,43 +316,43 @@ final class Mapbox extends AbstractHttpProvider implements Provider
      *
      * @param AddressBuilder $builder
      * @param string         $type    Component type
-     * @param object         $value  The component value
+     * @param array         $value  The component value
      */
-    private function updateAddressComponent(AddressBuilder $builder, string $type, $value)
+    private function updateAddressComponent(AddressBuilder $builder, string $type, array $value)
     {
         $typeParts = explode('.', $type);
         $type = reset($typeParts);
 
         switch ($type) {
             case 'postcode':
-                $builder->setPostalCode($value->text);
+                $builder->setPostalCode($value['text']);
 
                 break;
 
             case 'locality':
-                $builder->setLocality($value->text);
+                $builder->setLocality($value['text']);
 
                 break;
 
             case 'country':
-                $builder->setCountry($value->text);
-                $builder->setCountryCode(strtoupper($value->short_code));
+                $builder->setCountry($value['text']);
+                $builder->setCountryCode(strtoupper($value['short_code']));
 
                 break;
 
             case 'neighborhood':
-                $builder->setValue($type, $value->text);
+                $builder->setValue($type, $value['text']);
 
                 break;
 
             case 'place':
-                $builder->addAdminLevel(1, $value->text);
-                $builder->setLocality($value->text);
+                $builder->addAdminLevel(1, $value['text']);
+                $builder->setLocality($value['text']);
 
                 break;
 
             case 'region':
-                $builder->addAdminLevel(2, $value->text);
+                $builder->addAdminLevel(2, $value['text']);
 
                 break;
 
@@ -364,14 +366,14 @@ final class Mapbox extends AbstractHttpProvider implements Provider
      * @param string $url
      * @param string $content
      *
-     * @return mixed result form json_decode()
+     * @return array
      */
-    private function validateResponse(string $url, $content)
+    private function validateResponse(string $url, $content) : array
     {
-        $json = json_decode($content);
+        $json = json_decode($content, true);
 
         // API error
-        if (!isset($json)) {
+        if (!isset($json) || json_last_error() !== JSON_ERROR_NONE) {
             throw InvalidServerResponse::create($url);
         }
 
@@ -382,19 +384,19 @@ final class Mapbox extends AbstractHttpProvider implements Provider
      * Parse coordinats and bounds.
      *
      * @param AddressBuilder $builder
-     * @param $result
+     * @param array $result
      */
-    private function parseCoordinates(AddressBuilder $builder, $result)
+    private function parseCoordinates(AddressBuilder $builder, array $result)
     {
-        $coordinates = $result->geometry->coordinates;
+        $coordinates = $result['geometry']['coordinates'];
         $builder->setCoordinates($coordinates[1], $coordinates[0]);
 
-        if (isset($result->bbox)) {
+        if (isset($result['bbox'])) {
             $builder->setBounds(
-                $result->bbox[1],
-                $result->bbox[0],
-                $result->bbox[3],
-                $result->bbox[2]
+                $result['bbox'][1],
+                $result['bbox'][0],
+                $result['bbox'][3],
+                $result['bbox'][2]
             );
         }
     }
